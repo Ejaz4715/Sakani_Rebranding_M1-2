@@ -1,0 +1,49 @@
+{
+  "name": "sakani-rebranding-e2e",
+  "version": "1.0.0",
+  "description": "Playwright + TypeScript E2E suite (POM) for the rebranded Sakani portal — Pre-Beta",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test",
+    "test:grep": "playwright test -g",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report",
+    "codegen": "playwright codegen",
+    "clean-reports": "echo 'Cleaning history folder...' && node -e \"fs.rmSync('report-dashboard/test-reports-history', { recursive: true, force: true }); fs.mkdirSync('report-dashboard/test-reports-history', { recursive: true });\"",
+    "merge-results": "node report-dashboard/merge-results.js",
+    "generate-report": "node report-dashboard/generate-dashboard.js",
+    "open-report": "open-cli report-dashboard/dashboard.html",
+    "post-test": "npm run merge-results && npm run generate-report && npm run open-report",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.1.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "mkdirp": "^3.0.1",
+    "open-cli": "^9.0.0",
+    "prettier": "^3.9.10",
+    "rimraf": "^6.1.3",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^5.1.7",
+    "tsx": "^4.19.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "exceljs": "^3.4.0",
+    "pdf-parse": "^2.4.5",
+    "playwright": "^1.63.0",
+    "xlsx": "^0.18.5"
+  },
+  "lint-staged": {
+    "*.{js,ts,jsx,tsx,json,css,md}": [
+      "prettier --write"
+    ]
+  }
+}

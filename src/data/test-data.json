@@ -1,0 +1,10 @@
+{
+  "environments": {
+    "sakaniUserBeta": "https://stg-digitar-sakani.housingapps.sa/"
+  },
+  "services": {
+    "login": {
+      "userId": "1016549832"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+playwright-report/
+test-results/
+specs/
+dist/
+build/
+coverage/
+*.min.js
+package-lock.json
+tsconfig.json
+README.md
+.services.swp
