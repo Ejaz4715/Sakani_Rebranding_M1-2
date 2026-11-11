@@ -139,4 +139,28 @@ test.describe('SAKANI-46873 - Contact us', () => {
     await contactUsPage.expectSubmitted('proposal');
     expect(posted, `POST ${API.contactUsForm} should have succeeded`).toContain(200);
   });
+
+  /**
+   * Restored 2026-11-11. Listed in the E2E inventory (DEF-03 / DEF-04) but
+   * absent from the code base.
+   *
+   * An inquiry must be confirmed *as an inquiry* (`subject=query`, which
+   * `expectSubmitted('inquiry')` waits for) and must hand back the id of the
+   * request it created. Creates a real record, hence `@submits-data`.
+   */
+  test('SAKANI-46873-05 - Submission confirmation matches the request type and returns a request id @submits-data', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ contactUsPage }) => {
+    await contactUsPage.open();
+    await contactUsPage.fill({
+      requestType: REQUEST_TYPES.inquiry,
+      inquirySubType: INQUIRY_SUB_TYPES[0],
+      message: CONTACT_LEAD.message('inquiry confirmation'),
+    });
+    await contactUsPage.submit();
+
+    await logStep('Step 01: the confirmation names the request type that was sent (DEF-03)');
+    await contactUsPage.expectSubmitted('inquiry');
+
+    await logStep('Step 02: the confirmation carries the id of the created request (DEF-04)');
+    expect(contactUsPage.requestIdFromUrl(), `the success URL should carry a requestId (${contactUsPage.page.url()}) (DEF-04)`).not.toBeNull();
+  });
 });

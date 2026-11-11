@@ -6,7 +6,7 @@ import { logStep } from '@helpers/LogSteps';
  * SAKANI-46035 — Error & maintenance pages.
  *
  * Beta serves two different not-found pages, which is the substance of this
- * story: the dedicated `/rebranding-page-not-found` carries the rebranded
+ * story: the dedicated `/page-not-found` carries the rebranded
  * design, while a genuinely unknown URL falls back to the pre-rebranding
  * template.
  */
@@ -41,7 +41,7 @@ test.describe('SAKANI-46035 - Error pages', () => {
       /**
        * The manual case points at the rebranded 404 as the expected destination.
        * Beta renders the legacy template for unknown URLs instead, and does not
-       * redirect to `/rebranding-page-not-found`. The assertion states the
+       * redirect to `/page-not-found`. The assertion states the
        * intended behaviour; expected to fail while the defect is open (DEF-07).
        */
       await logStep('Step 03: an unknown URL should present the rebranded 404');

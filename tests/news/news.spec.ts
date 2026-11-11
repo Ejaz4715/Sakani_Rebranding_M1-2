@@ -48,7 +48,7 @@ test.describe('SAKANI-46231 - News', () => {
     expect(headline.length, 'the activated card should carry a headline').toBeGreaterThan(25);
 
     await logStep('Step 01: the article detail page opens');
-    await expect(page).toHaveURL(/\/rebranding-news\/.+/);
+    await expect(page).toHaveURL(ROUTES.newsArticle);
     const initialDetailText = await page.locator('body').innerText();
     expect(initialDetailText.trim().length).toBeGreaterThan(200);
 

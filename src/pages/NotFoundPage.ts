@@ -7,7 +7,7 @@ import { ROUTES } from '@data/testData';
  *
  * Beta serves two different ones, which is the substance of SAKANI-46035:
  *
- *  - `/rebranding-page-not-found` is a CMS page carrying the **rebranded**
+ *  - `/page-not-found` is a CMS page carrying the **rebranded**
  *    design: a large "404", an apology line, and "بيت" / "سوق إلكتروني" buttons
  *    pointing at `https://sakani.sa`.
  *  - Any genuinely unknown URL falls back to the **legacy** 404 template —

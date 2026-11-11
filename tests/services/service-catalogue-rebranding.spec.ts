@@ -43,7 +43,9 @@ test.describe('SAKANI-42321 - Service catalogue rebranding', () => {
       await logStep('Step 02: the magnifier opens the search modal from the catalogue');
       await header.openGlobalSearch();
       await globalSearch.expectOpen();
-      await expect(globalSearch.popularServicesHeading).toBeVisible();
+      // Soft: see SAKANI-41908-06 — the suggestions are gone from the empty
+      // overlay, which must not stop the close and login checks below.
+      await expect.soft(globalSearch.popularServicesHeading, 'the empty overlay should suggest the most common services').toBeVisible();
 
       await globalSearch.close();
       expect(page.url(), 'closing the modal should leave the catalogue where it was').toContain(ROUTES.services);
@@ -188,18 +190,30 @@ test.describe('SAKANI-42321 - Service catalogue rebranding', () => {
     await expect(servicesPage.emptyState).toBeVisible();
   });
 
-  test('SAKANI-42321-08 - Validate global footer navigation', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ servicesPage, footer, newsletter, page }) => {
+  test('SAKANI-42321-08 - Validate global footer navigation and newsletter subscription', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ servicesPage, footer, newsletter, page }) => {
     await servicesPage.open();
 
+    // Soft so every destination is reported in one run instead of stopping at
+    // the first mismatch; the test still fails if any of them is wrong.
     await logStep('Step 01: the footer is rendered with every documented destination');
     await footer.expectRendered();
     for (const [key, destination] of Object.entries(footer.destinations)) {
       const link = footer.link(destination.label);
-      await expect(link, `footer link "${key}"`).toHaveCount(1);
-      await expect(link).toHaveAttribute('href', destination.href);
+      await expect.soft(link, `footer link "${key}"`).toHaveCount(1);
+      await expect.soft(link, `footer link "${key}" should lead to ${destination.href}`).toHaveAttribute('href', destination.href);
     }
 
-    await logStep('Step 02: a footer link navigates away from the catalogue');
+    /**
+     * Restored 2026-11-11. TC-08 places the newsletter subscription in the
+     * *global* footer; this check had been removed, so DEF-13 stopped being
+     * reported. Presence only — nothing is submitted, so it stays safe to run.
+     */
+    await logStep('Step 02: the global footer offers the newsletter subscription');
+    const newsletterOffered = await newsletter.emailInput.isVisible().catch(() => false);
+    expect.soft(newsletterOffered, 'the catalogue footer should offer the newsletter capture; it is published on the landing page only (DEF-13)').toBe(true);
+    if (newsletterOffered) expect.soft(await newsletter.isInFooter(), 'the newsletter capture should sit in the global footer (DEF-13)').toBe(true);
+
+    await logStep('Step 03: a footer link navigates away from the catalogue');
     await footer.open('reports');
     expect(page.url()).toContain(footer.destinations.reports.href);
   });

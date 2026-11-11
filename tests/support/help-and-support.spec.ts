@@ -30,7 +30,9 @@ test.describe('SAKANI-46029 - Help and support', () => {
     await supportPage.open();
 
     await expect(supportPage.title).toBeVisible();
-    await expect(supportPage.breadcrumbHome).toBeVisible();
+    // Soft, so the channel cards below are still verified while the
+    // breadcrumb's home entry is mislabelled "Rebranding Sakani" (DEF-19).
+    await expect.soft(supportPage.breadcrumbHome, 'the breadcrumb should start at "الصفحة الرئيسية" (DEF-19)').toBeVisible();
 
     for (const [key, channel] of Object.entries(SUPPORT_CHANNELS)) {
       await logStep(`Step 01: the "${channel.title}" channel card is present`);
@@ -68,7 +70,9 @@ test.describe('SAKANI-46029 - Help and support', () => {
 
     const card = supportPage.card(SUPPORT_CHANNELS.reportCorruption.title);
     await expect(card).toBeVisible();
-    await expect(card).toContainText(SUPPORT_CHANNELS.reportCorruption.action);
+    // Soft, so the destination below is still verified: the 2026-11 card shows
+    // no action label at all (flagged for clarification).
+    await expect.soft(card, `the card should offer its "${SUPPORT_CHANNELS.reportCorruption.action}" action`).toContainText(SUPPORT_CHANNELS.reportCorruption.action);
     await expect(card).toHaveAttribute('href', SUPPORT_CHANNELS.reportCorruption.href);
   });
 

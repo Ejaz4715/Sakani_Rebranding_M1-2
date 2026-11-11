@@ -176,16 +176,21 @@ export class ProfilePage extends BasePage {
    */
   async openDashboard(): Promise<void> {
     await this.gotoUntilReady(this.sideNav, ROUTES.profileDashboard);
-    let previous = -1;
+    // The lower cards (the support waiver and "browse units") arrive after the
+    // eligibility section below the fold has loaded; walking the page brings
+    // them into existence. Without this the count "settled" on the first three.
+    await this.hydrate();
+    // Settled = the same non-zero count on three consecutive reads ~2s apart,
+    // so a pause between two batches of tiles is not mistaken for the end.
+    const history: number[] = [];
     await expect
       .poll(
         async () => {
-          const current = await this.dashboardCards().count();
-          const settled = current === previous && current > 0;
-          previous = current;
-          return settled;
+          history.push(await this.dashboardCards().count());
+          const recent = history.slice(-3);
+          return recent.length === 3 && recent[0] > 0 && recent.every((count) => count === recent[0]);
         },
-        { timeout: 60_000, intervals: [1000, 1000, 1500] },
+        { timeout: 90_000, intervals: [2000] },
       )
       .toBe(true);
   }

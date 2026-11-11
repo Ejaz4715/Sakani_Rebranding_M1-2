@@ -12,16 +12,16 @@ export interface RelatedService {
 }
 
 /**
- * A service detail page — `/rebranding-services/<slug>`.
+ * A service detail page — `/services/<slug>`.
  *
  * Beta serves these from more than one template, which is what SAKANI-42357
  * TC-08 is about:
  *
- *  - the **full** template (e.g. `rebranding-check-eligibility`) carries a
+ *  - the **full** template (e.g. `check-eligibility`) carries a
  *    `.rebranding-service-tabs` block, a `.rebranding-service-sidebar-wrapper`
  *    of service details and support links, a "خدمات ذات صلة" band and the
  *    page-rating control;
- *  - the **editorial** template (e.g. `rebranding-off-plan-projects`) is a plain
+ *  - the **editorial** template (e.g. `off-plan-projects`) is a plain
  *    run of content sections with a single call to action and none of the above.
  *
  * The tabs are `div[role="tab"]` with `aria-selected`, but they carry no
