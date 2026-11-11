@@ -6,7 +6,7 @@ import { SortPanel } from './components/SortPanel';
 import { REPORT_CARD, ROUTES } from '@data/testData';
 
 /**
- * The reports listing — `/rebranding-reports`.
+ * The reports listing — `/reports`.
  *
  * Three category tabs (Sakani reports / residential outreach / programme book)
  * switch the listing; a sort panel and a paginator sit above it.
@@ -50,9 +50,17 @@ export class ReportsPage extends BasePage {
     await this.waitForListingToSettle();
   }
 
-  /** Preview links for reports whose file is published. */
+  /**
+   * Preview links for reports whose file is published.
+   *
+   * Located by what the control is — a download link to a PDF — and not by its
+   * label. The label is exactly what SAKANI-46375-06 judges (it used to be the
+   * raw key `report_preview`, DEF-05), so the locator must not depend on it:
+   * matching on the key would find nothing once the label is translated, and
+   * matching on the translation would hide the defect if it came back.
+   */
   previewLinks(): Locator {
-    return this.page.locator('a').filter({ hasText: REPORT_CARD.previewKey });
+    return this.page.locator('a[download][href*=".pdf"]').filter({ visible: true });
   }
 
   /** "Coming soon" buttons for reports with no published file. */

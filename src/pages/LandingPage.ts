@@ -30,7 +30,7 @@ export interface HeroSlide {
 }
 
 /**
- * The rebranded landing page — `/rebranding-sakani`.
+ * The rebranded landing page — `/` (formerly `/rebranding-sakani`).
  *
  * Beta serves editorial placeholder content in the hero carousel ("Test Main
  * Banner", "CTA title", "CTA Test"), so this page object deliberately exposes
@@ -166,6 +166,39 @@ export class LandingPage extends BasePage {
         titleClass: HERO_CAROUSEL.titleClass,
         descriptionClass: HERO_CAROUSEL.descriptionClass,
       },
+    );
+  }
+
+  /**
+   * The promotional content of every published slide, deduplicated.
+   *
+   * Swiper's loop mode clones slides, so the same slide can appear more than
+   * once; clones are collapsed on their content. Reading all of them, rather
+   * than only the active one, makes the verdict independent of which slide the
+   * auto-rotating carousel happens to show at the moment of reading.
+   */
+  async allSlides(): Promise<HeroSlide[]> {
+    return this.page.evaluate(
+      ({ titleClass, descriptionClass }) => {
+        const clean = (value: string | null | undefined) => (value ?? '').replace(/\s+/g, ' ').trim();
+        const slides = [...document.querySelectorAll('.swiper-slide')].filter((slide) => slide.closest('.swiper-slide') === slide && !slide.parentElement?.closest('.swiper-slide'));
+        const seen = new Set<string>();
+        const result: { title: string; description: string; ctas: string[] }[] = [];
+        for (const slide of slides) {
+          const entry = {
+            title: clean(slide.querySelector(`.${titleClass}`)?.textContent),
+            description: clean(slide.querySelector(`.${descriptionClass}`)?.textContent),
+            ctas: [...slide.querySelectorAll('a[href], button')].map((element) => clean(element.textContent)).filter(Boolean),
+          };
+          const key = JSON.stringify(entry);
+          if (!seen.has(key)) {
+            seen.add(key);
+            result.push(entry);
+          }
+        }
+        return result;
+      },
+      { titleClass: HERO_CAROUSEL.titleClass, descriptionClass: HERO_CAROUSEL.descriptionClass },
     );
   }
 

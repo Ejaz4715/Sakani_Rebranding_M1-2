@@ -11,8 +11,7 @@ export interface ContactSubmission {
 }
 
 /**
- * The rebranded Contact-us form —
- * `/rebranding-support-and-help/rebranding-contact-us`.
+ * The rebranded Contact-us form — `/support-and-help/contact-us`.
  *
  * Every control is a `sakani-wc-*` web component. Two consequences shape the
  * locators here:
@@ -43,6 +42,7 @@ export class ContactUsPage extends BasePage {
   readonly regionControl: Locator;
   readonly cityControl: Locator;
   readonly requestTypeTrigger: Locator;
+  readonly inquiryTypeControl: Locator;
   readonly inquiryTypeTrigger: Locator;
 
   readonly nationalIdInput: Locator;
@@ -70,22 +70,34 @@ export class ContactUsPage extends BasePage {
     // control host is what a visibility assertion has to look at. The inputs
     // (`#subject`, `#region`, `#city`) stay the interaction targets.
     this.requestTypeSelect = page.locator('sakani-wc-select[field-id="subject"]');
-    this.complaintTypeSelect = page.locator("//label[@for ='complaint_type']/parent::div/descendant::div[text() = 'حدد نوع الشكوى']");
-    this.complaintTypeOption = page.locator("//div[text()= 'شكوى أخرى']");
+    // Formerly XPath; the placeholder and the option are reachable by text and
+    // by role respectively, which is what the rest of the form uses.
+    // Not re-verified in 2026-11 (only reachable through the complaint journey,
+    // which submits data); both placeholder wordings the form family uses are
+    // accepted, scoped to the select's own `field-id`.
+    this.complaintTypeSelect = page.locator('sakani-wc-select[field-id="complaint_type"]').getByText(/^\s*(حدد|اختر) نوع الشكوى\s*$/).first();
+    this.complaintTypeOption = page.getByRole('option', { name: 'شكوى أخرى', exact: true }).first();
     this.regionControl = page.locator('sakani-wc-select[field-id="region"]');
     this.cityControl = page.locator('sakani-wc-select[field-id="city"]');
     this.requestTypeTrigger = page.getByText('اختر نوع الطلب', { exact: true }).first();
-    this.inquiryTypeTrigger = page.getByText('حدد نوع الاستفسار', { exact: true }).first();
+    // The dependent select is identified by its `field-id`, like the others;
+    // its placeholder (the click target) was "حدد نوع الاستفسار" before 2026-11.
+    this.inquiryTypeControl = page.locator('sakani-wc-select[field-id="inquiry"]');
+    this.inquiryTypeTrigger = this.inquiryTypeControl.getByText('اختر نوع الاستفسار', { exact: true }).first();
 
+    // Placeholders re-read on 2026-11-11 ("الاسم" was "أدخل اسم المستفيد", and
+    // "أدخل البريد الإلكتروني" was "أدخل عنوان البريد الإلكتروني").
     this.nationalIdInput = page.getByRole('textbox', { name: 'أدخل رقم الهوية' });
-    this.nameInput = page.getByRole('textbox', { name: 'أدخل اسم المستفيد' });
+    this.nameInput = page.getByRole('textbox', { name: 'الاسم', exact: true });
     this.phoneInput = page.getByRole('textbox', { name: '5xxxxxxxxxx' });
-    this.emailInput = page.getByRole('textbox', { name: 'أدخل عنوان البريد الإلكتروني' });
+    this.emailInput = page.getByRole('textbox', { name: 'أدخل البريد الإلكتروني' });
     this.regionSelect = page.locator('#region');
     this.citySelect = page.locator('#city');
     this.messageInput = page.locator('#message');
     this.submitButton = page.locator('button[type="submit"]').filter({ hasText: /^\s*إرسال\s*$/ }).first();
-    this.recaptchaNotice = page.getByText(/reCAPTCHA/i).first();
+    // The bot-protection notice now names Cloudflare Turnstile; reCAPTCHA is
+    // kept in the pattern so either provider's notice satisfies the check.
+    this.recaptchaNotice = page.getByText(/Cloudflare|reCAPTCHA/i).first();
 
     this.successHeading = page.getByText(/^شكرا?ً\s/).first();
     this.successDoneButton = page.locator('button').filter({ hasText: /^\s*منتهي\s*$/ }).first();
@@ -189,9 +201,19 @@ export class ContactUsPage extends BasePage {
     await this.option(type).click();
   }
 
-  /** True when the dependent "نوع الاستفسار" select is on the page. */
+  /**
+   * True when the dependent "نوع الاستفسار" select is on the page.
+   *
+   * Polls briefly: the select is added by a re-render that lands a moment
+   * after the request type is chosen, and a single instantaneous read can
+   * precede it. A select that never appears still answers `false`.
+   */
   async hasInquirySubType(): Promise<boolean> {
-    return this.inquiryTypeTrigger.isVisible().catch(() => false);
+    return this.inquiryTypeControl
+      .first()
+      .waitFor({ state: 'visible', timeout: 10_000 })
+      .then(() => true)
+      .catch(() => false);
   }
 
   async selectRegion(region: string): Promise<void> {
@@ -231,8 +253,13 @@ export class ContactUsPage extends BasePage {
     if (await this.emailInput.isEnabled()) {
       await this.emailInput.fill(CONTACT_LEAD.email);
     }
-    await this.page.getByText('حدد نوع الشكوى').click();
-    await this.page.getByText('شكوى أخرى').click();
+    // Only a complaint carries the dependent "نوع الشكوى" select. This used to
+    // run for every request type, so the inquiry and proposal journeys waited
+    // on a control their form never renders.
+    if (submission.requestType === REQUEST_TYPES.complaint) {
+      await this.complaintTypeSelect.click();
+      await this.complaintTypeOption.click();
+    }
     await this.selectRegion(CONTACT_LEAD.region);
     await this.selectCity(CONTACT_LEAD.city);
     await this.messageInput.fill(submission.message);
@@ -247,7 +274,7 @@ export class ContactUsPage extends BasePage {
    * Wait for the success screen.
    *
    * The application signals success by navigating to
-   * `…/rebranding-contact-us/success?subject=<kind>&requestId=…`.
+   * `…/contact-us/success?subject=<kind>&requestId=…`.
    */
   async expectSubmitted(kind: keyof typeof CONTACT_SUCCESS_SUBJECT): Promise<void> {
     await this.page.waitForURL(

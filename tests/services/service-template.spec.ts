@@ -138,10 +138,11 @@ test.describe('SAKANI-42357 - Service template page', () => {
         await expect(serviceTemplatePage.sidebarLink(link.label), `sidebar link "${link.label}"`).toHaveAttribute('href', link.href);
       }
 
-      await logStep('Step 03: the user guide is published and retrievable');
+      // Read now, fetched last: the guide check is moved to the end so a broken
+      // file cannot stop the editorial-template step from being verified.
       const guide = serviceTemplatePage.sidebar.getByRole('link', { name: full.guideDownload.label, exact: true }).first();
       await expect(guide).toHaveAttribute('href', /\.pdf(\?|$)/);
-      await expectPdfIsPublished(serviceTemplatePage.page, await fileUrl(guide));
+      const guideHref = await fileUrl(guide);
 
       /**
        * Not every service uses that template. The off-plan product is published
@@ -157,6 +158,9 @@ test.describe('SAKANI-42357 - Service template page', () => {
         await expect(serviceTemplatePage.heading(section), `section "${section}"`).toBeVisible();
       }
       await expect(serviceTemplatePage.cta(editorial.cta)).toBeVisible();
+
+      await logStep('Step 05: the full template\'s user guide is published and retrievable');
+      await expectPdfIsPublished(serviceTemplatePage.page, guideHref);
     }
   );
 
@@ -179,10 +183,12 @@ test.describe('SAKANI-42357 - Service template page', () => {
       await logStep('Step 03: the breadcrumb reports where the page sits');
       await expect(serviceTemplatePage.breadcrumb).toBeVisible();
       const trail = (await serviceTemplatePage.breadcrumb.innerText()).replace(/\s+/g, ' ').trim();
+      // Soft, so the breadcrumb's navigation (Step 04) and the CTA (Step 05) are
+      // still verified when a label is wrong.
       for (const crumb of SERVICE_TEMPLATE.breadcrumb) {
-        expect(trail, `breadcrumb entry "${crumb}"`).toContain(crumb);
+        expect.soft(trail, `breadcrumb entry "${crumb}" (the trail reads "${trail}")`).toContain(crumb);
       }
-      expect(trail, 'the breadcrumb should name the current service').toContain(full.title);
+      expect.soft(trail, 'the breadcrumb should name the current service').toContain(full.title);
 
       await logStep('Step 04: the breadcrumb navigates back to the catalogue');
       await serviceTemplatePage.breadcrumb.getByText(SERVICE_TEMPLATE.breadcrumb[1], { exact: true }).first().click();

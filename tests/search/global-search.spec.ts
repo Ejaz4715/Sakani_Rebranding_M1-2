@@ -22,7 +22,10 @@ test.describe('SAKANI-46230 - Global search', () => {
       await expect(globalSearch.input).toHaveAttribute('placeholder', GLOBAL_SEARCH.placeholder);
 
       await logStep('Step 02: the overlay suggests popular services before anything is typed');
-      await expect(globalSearch.popularServicesHeading).toBeVisible();
+      // Soft, so the typed search below is still verified: the 2026-11 release
+      // shows a prompt here instead of the "most common services" suggestions
+      // (flagged for clarification).
+      await expect.soft(globalSearch.popularServicesHeading, 'the empty overlay should suggest the most common services').toBeVisible();
 
       await logStep('Step 03: typing a query returns grouped results');
       await globalSearch.search(GLOBAL_SEARCH.term);

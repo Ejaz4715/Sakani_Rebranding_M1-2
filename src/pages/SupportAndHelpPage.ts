@@ -5,7 +5,7 @@ import { Footer } from './components/Footer';
 import { ROUTES, SUPPORT_LOCATIONS } from '@data/testData';
 
 /**
- * The help & support hub — `/rebranding-support-and-help`.
+ * The help & support hub — `/support-and-help`.
  *
  * Two areas matter to the manual cases: a grid of support-channel cards (each
  * card is one anchor wrapping title, description and any action label), and the

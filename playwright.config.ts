@@ -43,7 +43,10 @@ export default defineConfig({
   expect: { timeout: 30_000 },
 
   use: {
-    baseURL: process.env.BASE_URL ?? 'https://pre-beta-sakani.housingapps.sa',
+    // Single source of the environment URL. `.env` normally supplies it; the
+    // fallback is the Pre-Beta target re-validated on 2026-11-11. Trailing
+    // slashes are stripped so `ROUTES` paths always join cleanly.
+    baseURL: (process.env.BASE_URL ?? 'https://pre-beta-sakani.housingapps.sa').replace(/\/+$/, ''),
     permissions: ['geolocation', 'local-network-access'],
     geolocation: { latitude: 21.5424, longitude: 39.198 },
     navigationTimeout: 120_000,
@@ -54,9 +57,14 @@ export default defineConfig({
     locale: 'ar-SA',
     timezoneId: 'Asia/Riyadh',
     ignoreHTTPSErrors: true,
-    headless: false,
+    // Headed by default, as before. `HEADLESS=1` runs without a window (CI, or
+    // a machine nobody is watching).
+    headless: process.env.HEADLESS === '1',
 
-    viewport: null,
+    // Headed runs keep the maximised window. Headless has no window to
+    // maximise, and `null` there yields 800x600, where the header collapses
+    // into its burger menu — so it gets the desktop size the other contexts use.
+    viewport: process.env.HEADLESS === '1' ? { width: 1440, height: 900 } : null,
 
     launchOptions: {
       args: [

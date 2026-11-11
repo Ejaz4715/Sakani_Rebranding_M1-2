@@ -29,3 +29,7 @@ test-results/
 report-dashboard/test-reports-history*/
 report-dashboard/test*/
 report-dashboard/dashboard.html
+# Local environment & credentials (never commit)
+.env
+.env.*
+!.env.example

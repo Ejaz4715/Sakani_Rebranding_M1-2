@@ -33,7 +33,7 @@ import { logStep } from '@helpers/LogSteps';
  * that the catalogue really publishes the same working header (see the summary).
  */
 test.describe('SAKANI-41908 - Landing page rebranding', () => {
-  test('SAKANI-41908-01 - Validate Hero Toggle Buy/Rent Search Interactions', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ landingPage, page }) => {
+  test('SAKANI-41908-01 - Validate Hero Video Toggle and Buy/Rent Search Interactions', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ landingPage, page }) => {
     // A cold landing page, a ranged fetch of the promo file and a second tab,
     // on top of the search-bar interactions. The default 180s does not cover it.
     test.setTimeout(300_000);
@@ -52,11 +52,19 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
     const dots = await landingPage.heroDots().count();
     expect(dots, 'the hero should publish a carousel of promotional slides').toBeGreaterThanOrEqual(HERO_CAROUSEL.minimumSlides);
 
-    const slide = await landingPage.activeSlide();
-    expect(slide, 'the carousel should have a live slide').not.toBeNull();
-    expect((slide as HeroSlide).title.length, 'the slide should carry a title').toBeGreaterThan(0);
-    expect((slide as HeroSlide).description.length, 'the slide should carry a description').toBeGreaterThan(0);
-    expect((slide as HeroSlide).ctas, 'the slide should offer a call to action').not.toEqual([]);
+    expect(await landingPage.activeSlide(), 'the carousel should have a live slide').not.toBeNull();
+
+    // Every published slide, not only the one on screen: the carousel rotates,
+    // so judging the active slide alone made the verdict depend on timing.
+    // Soft, so the remaining hero steps still run and report.
+    const slides: HeroSlide[] = await landingPage.allSlides();
+    expect(slides.length, 'the hero should publish its slides').toBeGreaterThanOrEqual(HERO_CAROUSEL.minimumSlides);
+    for (const [index, slide] of slides.entries()) {
+      const name = `slide ${index + 1} ("${slide.title || slide.ctas[0] || '?'}")`;
+      expect.soft(slide.title.length, `${name} should carry a title`).toBeGreaterThan(0);
+      expect.soft(slide.description.length, `${name} should carry a description`).toBeGreaterThan(0);
+      expect.soft(slide.ctas, `${name} should offer a call to action`).not.toEqual([]);
+    }
 
     /**
      * The dots, on `aria-current` rather than on the copy they reveal: the
@@ -100,6 +108,24 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
     expect(await landingPage.selectedSearchTab()).toBe(LANDING_SEARCH.buyTab);
     await landingPage.searchCity('الرياض');
     await expect(landingPage.cityInput).toHaveValue('الرياض');
+
+    /**
+     * Restored 2026-11-11. The case asks for a hero *video toggle* and
+     * SAKANI-42321 TC-02 for a "brand video modal display"; this check had been
+     * removed, so the missing feature stopped being reported. Activating the
+     * promo has to present the video on the page — an in-page player or a
+     * dialog. Last in the test so every step above still reports (DEF-14).
+     */
+    await logStep('Step 07: activating the brand promo presents the video in a player or modal');
+    const promoTab = await landingPage.activatePromo();
+    const players = await landingPage.playerCount();
+    const dialogs = await landingPage.openDialogs();
+    const promoTabUrl = promoTab?.url() ?? 'no new tab';
+    await promoTab?.close();
+    expect(
+      players + dialogs.length,
+      'the hero should toggle the brand video in an in-page player or modal; activating it opened ' + `${promoTabUrl} instead, with ${players} <video> element(s) and no dialog on the page (DEF-14)`
+    ).toBeGreaterThan(0);
   });
 
   test('SAKANI-41908-02 - Validate Product Cards & Partner Logo Redirections', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ landingPage, page }) => {
@@ -239,18 +265,20 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
        * actually went and on what answered — telemetry carrying it in a payload
        * is not a subscription, and a request nothing acknowledges is not storage.
        */
-      // const carryingEmail: Array<{ line: string; url: string; status?: number }> = [];
-      // page.on('request', (request) => {
-      //   const payload = `${request.url()} ${request.postData() ?? ''}`;
-      //   if (payload.includes(NEWSLETTER.email)) {
-      //     carryingEmail.push({ line: `${request.method()} ${request.url()}`, url: request.url() });
-      //   }
-      // });
-      // page.on('response', (response) => {
-      //   for (const entry of carryingEmail) {
-      //     if (entry.url === response.url() && entry.status === undefined) entry.status = response.status();
-      //   }
-      // });
+      // Restored 2026-11-11: this capture and the verdict below had been
+      // commented out, which silently stopped DEF-12 from being reported.
+      const carryingEmail: Array<{ line: string; url: string; status?: number }> = [];
+      page.on('request', (request) => {
+        const payload = `${request.url()} ${request.postData() ?? ''}`;
+        if (payload.includes(NEWSLETTER.email)) {
+          carryingEmail.push({ line: `${request.method()} ${request.url()}`, url: request.url() });
+        }
+      });
+      page.on('response', (response) => {
+        for (const entry of carryingEmail) {
+          if (entry.url === response.url() && entry.status === undefined) entry.status = response.status();
+        }
+      });
 
       await logStep('Step 03: a valid address is accepted and confirmed');
       await newsletter.enter(NEWSLETTER.email);
@@ -273,24 +301,18 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
        * observable point: a Sakani backend acknowledged the address. Anything
        * beyond that needs a mail or back-office check and is called out as such.
        */
-      // await test.step('the subscription reaches a Sakani backend that accepts it', async () => {
-      //   const subscription = carryingEmail.filter((entry) => !NEWSLETTER.telemetryPattern.test(entry.line));
-      //   const seen = carryingEmail.length
-      //     ? carryingEmail.map((entry) => `${entry.line} -> ${entry.status ?? 'no response'}`).join(' | ')
-      //     : 'none';
+      await test.step('Step 04: the subscription reaches a Sakani backend that accepts it', async () => {
+        const subscription = carryingEmail.filter((entry) => !NEWSLETTER.telemetryPattern.test(entry.line));
+        const seen = carryingEmail.length ? carryingEmail.map((entry) => `${entry.line} -> ${entry.status ?? 'no response'}`).join(' | ') : 'none';
 
-      //   expect(
-      //     subscription.map((entry) => entry.line),
-      //     'subscribing should send the address to a backend that can store it and dispatch the newsletter. ' +
-      //       `Requests seen carrying it: ${seen} (DEF-12)`,
-      //   ).not.toEqual([]);
+        expect(
+          subscription.map((entry) => entry.line),
+          'subscribing should send the address to a backend that can store it and dispatch the newsletter. ' + `Requests seen carrying it: ${seen} (DEF-12)`
+        ).not.toEqual([]);
 
-      //   const accepted = subscription.filter((entry) => entry.status !== undefined && entry.status < 400);
-      //   expect(
-      //     accepted.map((entry) => `${entry.line} -> ${entry.status}`),
-      //     `the backend should acknowledge the subscription. Seen: ${seen} (DEF-12)`,
-      // ).not.toEqual([]);
-      // });
+        const accepted = subscription.filter((entry) => entry.status !== undefined && entry.status < 400);
+        expect(accepted.map((entry) => `${entry.line} -> ${entry.status}`), `the backend should acknowledge the subscription. Seen: ${seen} (DEF-12)`).not.toEqual([]);
+      });
     }
   );
 
@@ -318,21 +340,23 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
     const rendered = await footer.hrefs();
     expect(rendered.length, 'the footer should carry every documented link').toBeGreaterThanOrEqual(FOOTER_LINKS.length);
 
+    // Soft: every link is judged in one run instead of the first mismatch hiding
+    // the other nineteen. The test still fails if any of them is wrong.
     for (const entry of FOOTER_LINKS) {
       const name = entry.label ?? entry.alt;
       const link = footer.linkFor(entry);
-      await expect(link, `footer link "${name}"`).toHaveCount(1);
+      await expect.soft(link, `footer link "${name}"`).toHaveCount(1);
 
       if (entry.href) {
-        await expect(link, `destination of "${name}"`).toHaveAttribute('href', entry.href);
+        await expect.soft(link, `destination of "${name}"`).toHaveAttribute('href', entry.href);
       } else {
-        await expect(link, `destination of "${name}"`).toHaveAttribute('href', new RegExp(escapeRegExp(entry.hrefContains as string)));
+        await expect.soft(link, `destination of "${name}"`).toHaveAttribute('href', new RegExp(escapeRegExp(entry.hrefContains as string)));
       }
     }
 
     await logStep('Step 02: the links that leave the site say so');
     for (const entry of FOOTER_LINKS.filter((link) => link.newTab)) {
-      await expect(footer.linkFor(entry), `"${entry.label ?? entry.alt}" should open a new tab`).toHaveAttribute('target', '_blank');
+      await expect.soft(footer.linkFor(entry), `"${entry.label ?? entry.alt}" should open a new tab`).toHaveAttribute('target', '_blank');
     }
 
     for (const entry of FOOTER_LINKS.filter((link) => !link.external)) {
@@ -345,11 +369,13 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
 
       // `commit`: the marketplace and the legacy rental-units page are heavy
       // applications that keep loading well after the route is taken.
-      await page.waitForURL(new RegExp(escapeRegExp(entry.href as string)), {
-        waitUntil: 'commit',
-        timeout: 90_000,
-      });
-      expect(page.url(), `"${entry.label}" should reach ${entry.href}`).toContain(entry.href);
+      // The wait only paces the step; the verdict is the assertion below, so a
+      // link that goes somewhere else is reported by name rather than as a
+      // bare timeout.
+      await page
+        .waitForURL(new RegExp(`${escapeRegExp(entry.href as string)}([?#]|$)`), { waitUntil: 'commit', timeout: 60_000 })
+        .catch(() => undefined);
+      expect.soft(new URL(page.url()).pathname, `"${entry.label}" should reach ${entry.href}; it reached ${page.url()}`).toBe(new URL(entry.href as string, page.url()).pathname);
     }
   });
 
@@ -418,17 +444,23 @@ test.describe('SAKANI-41908 - Landing page rebranding', () => {
       // Back to the landing page: the redirection steps above deliberately
       // leave the browser on the marketplace they navigated to.
       await landingPage.open();
+      const landingUrl = page.url();
 
       await header.openGlobalSearch();
       await globalSearch.expectOpen();
-      await expect(globalSearch.popularServicesHeading).toBeVisible();
+      // Soft: the 2026-11 release dropped the "most common services" suggestions
+      // from the empty overlay (flagged for clarification); it must not stop the
+      // close, Escape, language and audience checks below from running.
+      await expect.soft(globalSearch.popularServicesHeading, 'the empty overlay should suggest the most common services').toBeVisible();
 
       await logStep('Step 04: its close button dismisses it');
       await expect(globalSearch.closeButton, 'the overlay should offer a close control').toBeVisible();
       await globalSearch.close();
 
       await expect(header.logo).toBeVisible();
-      expect(page.url(), 'closing the modal should leave the page where it was').toContain('rebranding-sakani');
+      // Compared with the URL the landing page was opened on, rather than a
+      // hard-coded slug: the landing page moved from `/rebranding-sakani` to `/`.
+      expect(page.url(), 'closing the modal should leave the page where it was').toBe(landingUrl);
 
       await logStep('Step 05: and so does Escape, once it is open again');
       await header.openGlobalSearch();

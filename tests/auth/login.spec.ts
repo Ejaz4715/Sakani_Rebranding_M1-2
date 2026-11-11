@@ -53,4 +53,26 @@ test.describe('SAKANI-46024 - Login page', () => {
     expect(calls.some((c) => c.startsWith('200') && c.includes(API.iamLogin))).toBe(true);
     expect(calls.some((c) => c.startsWith('200') && c.includes(API.me))).toBe(true);
   });
+
+  /**
+   * Restored 2026-11-11. Listed in the E2E inventory (DEF-01) but absent from
+   * the code base, so the defect it tracks had stopped being checked.
+   *
+   * A user sent to login from a page should come back to that page once
+   * signed in. The journey starts from the service catalogue, a rebranded page
+   * a guest can reach, and hands its path to the login page as `returnUrl` —
+   * exactly what the header's login control does.
+   */
+  test('SAKANI-46024-03 - Login returns the user to the page they started from', { annotation: [{ product: Products.Rebranding, type: 'non-critical' } as any] }, async ({ loginPage, page }) => {
+    // Same budget as the other Nafath journeys: shell, modal and auto-approval.
+    test.setTimeout(420_000);
+    const origin = ROUTES.services;
+
+    await logStep(`Step 01: sign in from ${origin}`);
+    await loginPage.login(TEST_USER.nationalId, origin);
+
+    await logStep('Step 02: the user is returned to the page they started from');
+    await page.waitForURL((url) => url.pathname === origin, { waitUntil: 'commit', timeout: 90_000 }).catch(() => undefined);
+    expect(new URL(page.url()).pathname, `login should return to ${origin}; it landed on ${page.url()} (DEF-01)`).toBe(origin);
+  });
 });

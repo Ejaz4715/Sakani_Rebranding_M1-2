@@ -5,14 +5,14 @@ import { Pagination } from './components/Pagination';
 import { NEWS_READ_MORE, NEWS_SORT, ROUTES } from '@data/testData';
 
 /**
- * The news listing — `/rebranding-news`.
+ * The news listing — `/news`.
  *
  * Its sort control is a different component from the Reports one: a dropdown of
  * `div[role="button"][data-sort-type]` entries under a "نوع" group, applied on
  * click with no separate Apply/Clear buttons.
  *
  * Each article exposes a "اكتشف المزيد" control that navigates to
- * `/rebranding-news/<slug>`.
+ * `/news/<slug>` (`ROUTES.newsArticle`).
  */
 export class NewsPage extends BasePage {
   protected readonly path = ROUTES.news;
@@ -118,7 +118,7 @@ export class NewsPage extends BasePage {
     });
 
     await button.click();
-    await this.page.waitForURL(/\/rebranding-news\/.+/, { timeout: 90_000 });
+    await this.page.waitForURL(ROUTES.newsArticle, { timeout: 90_000 });
     return headline;
   }
 

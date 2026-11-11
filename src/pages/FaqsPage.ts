@@ -5,7 +5,7 @@ import { Pagination } from './components/Pagination';
 import { ROUTES } from '@data/testData';
 
 /**
- * The FAQs page — `/rebranding-support-and-help/rebranding-faqs`.
+ * The FAQs page — `/support-and-help/faqs`.
  *
  * Two filters sit above the list: a free-text search (`sakani-wc-input`, marked
  * `clearable`) and a category combobox. Each grows a red `aria-label="Clear"`

@@ -1,7 +1,7 @@
 import { Page, Locator, expect } from '@playwright/test';
 import { BasePage, PAGE_READY_TIMEOUT } from './BasePage';
 import { Header } from './components/Header';
-import { ROUTES } from '@data/testData';
+import { LOGIN_PAGE, ROUTES } from '@data/testData';
 
 /**
  * Login page — `/app/authentication/login`.
@@ -38,6 +38,9 @@ export class LoginPage extends BasePage {
   readonly nafathModalContinue: Locator;
   readonly nafathModalHeading: Locator;
 
+  /** First-time registration step shown to an identity with no Sakani account. */
+  readonly registrationStep: Locator;
+
   constructor(page: Page) {
     super(page);
     this.header = new Header(page);
@@ -55,11 +58,16 @@ export class LoginPage extends BasePage {
       .first();
     this.termsText = page.getByText(/أقبل سكني|I accept Sakani/i).first();
     this.securityNotice = page.getByText(/Cloudflare|reCAPTCHA/i).first();
-    this.heading = page.getByText(/حيث يصبح عقار أحلامك حقيقة/).first();
+    // The page's own heading. This used to target the marketing slogan
+    // "حيث يصبح عقار أحلامك حقيقة" in the visual half of the split; the
+    // 2026-11 release no longer publishes that text anywhere on the page
+    // (flagged for clarification in the migration report).
+    this.heading = page.getByRole('heading', { name: LOGIN_PAGE.heading, exact: true }).first();
 
     this.nafathModalIdInput = page.locator('#national-id-number');
     this.nafathModal = page.locator('div').filter({ has: this.nafathModalIdInput }).last();
     this.nafathModalHeading = page.getByText(/تسجيل الدخول بواسطة نفاذ/).first();
+    this.registrationStep = page.getByText('تأكيد معلوماتك', { exact: true }).first();
     // The modal's "المتابعة" computes no accessible name, so `getByRole` finds
     // nothing; text filtering is the strategy that resolves it. Anchored so it
     // cannot match the page's "المتابعة مع نفاذ".
@@ -115,12 +123,33 @@ export class LoginPage extends BasePage {
     await this.nafathModalContinue.click();
   }
 
-  /** Wait for beta's auto-approval to complete and the app to leave login. */
+  /**
+   * Wait for beta's auto-approval to complete and the app to leave login.
+   *
+   * An identity Nafath approves but Sakani has no account for is shown a
+   * first-time registration step ("تأكيد معلوماتك") instead. Completing it would
+   * create a real beneficiary account, so the journey stops there and says so,
+   * rather than waiting out the full budget for a redirect that will never come.
+   */
   async waitForAuthenticated(timeout = 180_000): Promise<void> {
-    await this.page.waitForURL((url) => !url.toString().includes('/authentication/login'), {
-      waitUntil: 'commit',
-      timeout,
-    });
+    const left = this.page
+      .waitForURL((url) => !url.toString().includes('/authentication/login'), { waitUntil: 'commit', timeout })
+      .then(() => 'authenticated' as const);
+    const registration = this.registrationStep
+      .waitFor({ state: 'visible', timeout })
+      .then(() => 'registration' as const);
+
+    const outcome = await Promise.race([left, registration]);
+    // Whichever lost keeps waiting in the background; keep it from surfacing.
+    left.catch(() => undefined);
+    registration.catch(() => undefined);
+
+    if (outcome === 'registration') {
+      throw new Error(
+        'TEST DATA BLOCKER: Nafath approved this identity, but it has no Sakani account on this environment — the app asks to register it ' +
+          '("تأكيد معلوماتك"). Completing that would create a real account, so the journey stops here. Provide an identity that is already registered.',
+      );
+    }
   }
 
   /** Full happy-path login: identifier -> Nafath -> authenticated session. */

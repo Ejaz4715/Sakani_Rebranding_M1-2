@@ -26,21 +26,37 @@ export const STORAGE_STATE = '.auth/user.json';
 /**
  * Routes of the rebranded pages.
  *
- * The rebranded CMS pages are prefixed `rebranding-`; the account portal and
- * marketplace remain on the pre-existing `/app/*` Angular routes.
+ * Re-verified on pre-beta on 2026-11-11: the rebranded CMS pages are now served
+ * from the canonical, **unprefixed** routes. Every former `rebranding-*` path
+ * (`/rebranding-sakani`, `/rebranding-services`, `/rebranding-news`, …) answers
+ * 404, and the landing page moved from `/rebranding-sakani` to the site root.
+ * The account portal and marketplace remain on the pre-existing `/app/*`
+ * Angular routes.
+ *
+ * Every journey resolves its paths from this table — keep it the only place a
+ * site route is written down.
  */
 export const ROUTES = {
-  landing: '/sakani',
+  landing: '/',
   services: '/services',
+  /** Parent of every service detail page: `/services/<slug>`. */
+  serviceDetail: (slug: string) => `/services/${slug}`,
   supportAndHelp: '/support-and-help',
-  faqs: '/support-and-help/rebranding-faqs',
+  faqs: '/support-and-help/faqs',
   /** Rebranded Contact-us form. */
-  contactUs: '/support-and-help/rebranding-contact-us',
-  contactUsSuccess: '/rebranding-support-and-help/rebranding-contact-us/success',
+  contactUs: '/support-and-help/contact-us',
+  /**
+   * NOT re-verified after the 2026-11 route change: reaching it needs a real
+   * submission (`@submits-data`). Derived from the form route by the same
+   * prefix removal every other route underwent.
+   */
+  contactUsSuccess: '/support-and-help/contact-us/success',
   reports: '/reports',
   news: '/news',
+  /** Parent of every article page: `/news/<slug>`. */
+  newsArticle: /\/news\/[^/?#]+/,
   terms: '/terms',
-  executiveRegulations: '/rebranding-housing-subsidy-policy',
+  executiveRegulations: '/housing-subsidy-policy',
   /** Dedicated rebranded 404 page (reachable directly, see SAKANI-46035). */
   notFound: '/page-not-found',
   login: '/app/authentication/login',
@@ -53,7 +69,7 @@ export const ROUTES = {
  * A URL that does not exist, used to assert the wrong-URL behaviour.
  * Suffixed so it can never collide with a real CMS slug.
  */
-export const UNKNOWN_ROUTE = '/rebranding-unknown-page-qa-automation';
+export const UNKNOWN_ROUTE = '/unknown-page-qa-automation-404';
 
 /* ------------------------------------------------------------------------ */
 /* Header                                                                     */
@@ -154,35 +170,51 @@ export const SERVICE_CATEGORIES = ['خدمات ومنتجات الدعم الس�
 export const SERVICE_USER_TYPES = ['باحث عن عقار', 'مستأجر', 'بائع', 'مالك عقار', 'وسيط عقاري', 'مطور عقاري'] as const;
 
 /**
- * Every service published on `/rebranding-services`, read off the live page.
+ * Every service published on `/services`, read off the live page (re-read on
+ * 2026-11-11 after the route change).
  *
  * `href` is asserted as well as the name, because several entries leave the
- * rebranded site (`/app/*`, `/page/amfm`) and the catalogue is the only place
- * that wiring is visible.
+ * rebranded site (`/app/*`) and the catalogue is the only place that wiring is
+ * visible. Since the route change every CMS service sits under
+ * `/services/<slug>` with the `rebranding-` slug prefix dropped, and
+ * "إدارة الأصول والمرافق" moved from `/page/amfm` into the catalogue. The last
+ * five entries are new on the 2026-11 catalogue.
  */
 export const SERVICES: readonly ServiceEntry[] = [
   // خدمات ومنتجات الدعم السكني
-  { name: 'وحدات البيع على الخارطة', href: '/rebranding-services/rebranding-off-plan-projects' },
-  { name: 'الوحدات الجاهزة', href: '/rebranding-services/rebranding-ready-units' },
-  { name: 'أرضك دعمك', href: '/rebranding-services/rebranding-lands' },
-  { name: 'التحقق من استحقاق الدعم السكني', href: '/rebranding-services/rebranding-check-eligibility' },
-  { name: 'تحمل ضريبة التصرفات العقارية للمسكن الأول', href: '/rebranding-services/rebranding-real-estate-tax-incurred-service' },
-  { name: 'المستشار العقاري', href: '/rebranding-services/rebranding-financial-advisory' },
-  { name: 'خدمة تأجير الوحدة السكنية', href: '/rebranding-services/rebranding-housing-unit-rental' },
-  { name: 'إفراغ الأراضي', href: '/rebranding-services/rebranding-conveyance-service' },
-  { name: 'حلول البناء الذاتي', href: '/rebranding-services/rebranding-construction-solutions' },
-  { name: 'منتج ذرى سكن +', href: '/rebranding-services/rebranding-sakani-plus' },
+  { name: 'وحدات البيع على الخارطة', href: '/services/off-plan-projects' },
+  { name: 'الوحدات الجاهزة', href: '/services/ready-units' },
+  { name: 'أرضك دعمك', href: '/services/lands' },
+  { name: 'التحقق من استحقاق الدعم السكني', href: '/services/check-eligibility' },
+  { name: 'تحمل ضريبة التصرفات العقارية للمسكن الأول', href: '/services/real-estate-tax-incurred-service' },
+  { name: 'المستشار العقاري', href: '/services/financial-advisory' },
+  { name: 'خدمة تأجير الوحدة السكنية', href: '/services/housing-unit-rental' },
+  { name: 'إفراغ الأراضي', href: '/services/conveyance-service' },
+  { name: 'حلول البناء الذاتي', href: '/services/construction-solutions' },
+  { name: 'منتج ذرى سكن +', href: '/services/sakani-plus' },
   // خدمات الحلول العقارية
-  { name: 'إصدار شهادة الفرز', href: '/rebranding-services/rebranding-farz-certificate' },
-  { name: 'التمويل العقاري الإلكتروني', href: '/rebranding-services/rebranding-online-lending' },
-  { name: 'حاسبة التمويل العقاري', href: '/rebranding-services/rebranding-mortgage-calculator' },
-  { name: 'إعادة بيع الوحدات', href: '/rebranding-services/rebranding-resell-units' },
+  { name: 'إصدار شهادة الفرز', href: '/services/farz-certificate' },
+  { name: 'التمويل العقاري الإلكتروني', href: '/services/online-lending' },
+  { name: 'حاسبة التمويل العقاري', href: '/services/mortgage-calculator' },
+  { name: 'إعادة بيع الوحدات', href: '/services/resell-units' },
   // أخرى
-  { name: 'أخبار سكني', href: '/rebranding-news' },
-  { name: 'إدارة الأصول والمرافق', href: '/page/amfm' },
+  { name: 'أخبار سكني', href: '/news' },
+  { name: 'إدارة الأصول والمرافق', href: '/services/amfm' },
   { name: 'عروض سكني', href: '/app/promotion-vouchers' },
-  { name: 'سكني ميتافيرس', href: '/rebranding-services/rebranding-sakani-metaverse' },
+  { name: 'سكني ميتافيرس', href: '/services/sakani-metaverse' },
+  { name: 'خدمة حجز المواعيد', href: '/services/appointment-service' },
+  { name: 'الوحدات المميزة', href: '/services/featured-units' },
+  { name: 'بيتك شخصيتك', href: '/services/home-personality' },
+  { name: 'سابع جار', href: '/services/neighbors-greetings' },
+  { name: 'السلوك الإيجاري', href: '/services/rental-score-inquiry' },
 ] as const;
+
+/**
+ * The hrefs a catalogue card can carry: a CMS service page, an `/app/*`
+ * product, or the news listing. Used to tell catalogue cards apart from the
+ * other links on the page.
+ */
+export const SERVICE_CARD_HREF = /^\/(services\/[^/?#]+|app\/|news$)/;
 
 /** A term that matches exactly one service, used for the catalogue search. */
 export const SERVICE_SEARCH = { term: 'حاسبة', expected: 'حاسبة التمويل العقاري' } as const;
@@ -273,11 +305,14 @@ export const REPORT_SORT = {
  * Preview affordances on a report card. Reports whose file is published render
  * a link; the rest render a disabled "coming soon" button.
  *
- * NOTE: the published-report control is labelled with the raw translation key
- * `report_preview` rather than a translated string — reported as a defect.
+ * The published-report control used to be labelled with the raw translation key
+ * `report_preview` (DEF-05). On 2026-11-11 it reads "معاينة". The page object
+ * locates the control by what it *is* — an `<a download>` to a PDF — so the
+ * DEF-05 assertion keeps judging the label rather than depending on it.
  */
 export const REPORT_CARD = {
   previewKey: 'report_preview',
+  previewLabel: 'معاينة',
   comingSoon: 'قريباً',
 } as const;
 
@@ -297,13 +332,19 @@ export const NEWS_READ_MORE = 'اكتشف المزيد';
 /* Help & support (SAKANI-46029)                                              */
 /* ------------------------------------------------------------------------ */
 
-/** Support channel cards, with the destination each one opens. */
+/**
+ * Support channel cards, with the destination each one opens.
+ *
+ * Since the 2026-11 route change "راسلنا" points at `/support-and-help/contact-us`,
+ * which is now the rebranded form itself (the legacy page DEF-02 described is
+ * gone), so its expected destination is simply `ROUTES.contactUs`.
+ */
 export const SUPPORT_CHANNELS = {
-  contactUs: { title: 'راسلنا', href: '/support-and-help/contact-us' },
+  contactUs: { title: 'راسلنا', href: ROUTES.contactUs },
   email: { title: 'البريد الإلكتروني', href: 'mailto:infoCS@momrah.gove.sa' },
   callCentre: { title: 'مركز عناية المستفيدين', href: 'tel:199090' },
-  complaintsGuide: { title: 'دليل الشكاوي', action: 'معاينة', hrefContains: '.pdf' },
-  faqs: { title: 'الأسئلة الشائعة', href: '/rebranding-support-and-help/rebranding-faqs' },
+  complaintsGuide: { title: 'دليل الشكاوي', action: 'حمل الملف', hrefContains: '.pdf' },
+  faqs: { title: 'الأسئلة الشائعة', href: ROUTES.faqs },
   reportCorruption: { title: 'الابلاغ عن شبة فساد', action: 'تقرير', href: 'https://momah.gov.sa/ar/report-corruption' },
   signLanguage: { title: 'دعم لغة الإشارة الحية', hrefContains: 'metaverse.sakani.sa' },
   x: { title: 'X', href: 'https://x.com/SaudiHousingCC' },
@@ -313,7 +354,8 @@ export const SUPPORT_CHANNELS = {
 /** "Comprehensive locations" carousel. */
 export const SUPPORT_LOCATIONS = {
   sectionTitle: 'مواقع مراكز سكني الشاملة',
-  directionsLabel: 'الاتجاهات',
+  /** Was "الاتجاهات" before the 2026-11 release. */
+  directionsLabel: 'توجه للموقع',
   /** Centres, in the order the carousel renders them. */
   centres: [
     { city: 'الرياض', title: 'موقع سكني الشامل في الرياض' },
@@ -437,7 +479,8 @@ export const GLOBAL_SEARCH = {
 export const LANDING_SEARCH = {
   buyTab: 'شراء',
   rentTab: 'إيجار',
-  cityPlaceholder: 'البحث حسب المدينة',
+  /** Was "البحث حسب المدينة" before the 2026-11 release. */
+  cityPlaceholder: 'ابحث عن مدينة',
   unitTypeLabel: 'نوع الوحدة',
   priceRangeLabel: 'نطاق السعر',
   submit: 'ابدأ الاستكشاف',
@@ -526,16 +569,26 @@ export const PARTNER_LOGOS = {
 export const LANDING_SCENARIOS = {
   sectionHeading: /خطوات أقل، وضوح أكثر/,
   cards: ['هل تبحث عن عقار؟', 'هل تبحث عن استئجار منزل؟', 'هل تملك عقارًا؟'],
-  /** CTA labels rendered inside the cards, read off the live page. */
+  /**
+   * CTA labels rendered inside the cards, re-read off the live page on
+   * 2026-11-11. The release replaced "احسب قدرتك الشرائية" and "تقسيم الأراضي"
+   * and added five CTAs; every one is still published as `href="#"` (DEF-11).
+   */
   links: [
-    'تحقق من أهليتك للدعم السكني',
+    // هل تبحث عن عقار؟
     'قدّم على تمويل سكني',
-    'احسب قدرتك الشرائية',
     'إصدار شهادة ضريبة القيمة المضافة',
+    'تحقق من أهليتك للدعم السكني',
     'استكشف المزيد من خيارات العقارات',
-    'استكشف المزيد من خيارات الإيجار',
-    'تقسيم الأراضي',
+    // هل تبحث عن استئجار منزل؟
+    'اكتشف سوق الإيجار',
+    'اكتشف قائمة الوسطاء',
     'توثيق العقود الرقمية',
+    'استكشف المزيد من خيارات الإيجار',
+    // هل تملك عقارًا؟
+    'اعرض وحدتك',
+    'إصدار خدمة النقل',
+    'إصدار شهادة فرز',
     'استكشف المزيد من الخيارات',
   ],
 } as const;
@@ -613,19 +666,23 @@ export interface FooterLink {
  * Note that "بيانات سكني", "شركاء سكني", "ديجيتار" and "المؤشرات العقارية"
  * leave the site **without** `target="_blank"`, so they replace the current
  * page rather than opening beside it — recorded as observed.
+ *
+ * The social row was re-read on 2026-11-11: the release dropped Snapchat and
+ * Facebook, added LinkedIn and TikTok, and moved YouTube, WhatsApp (now a
+ * channel) and Instagram to new URLs. Those are the owner's content choices and
+ * are mirrored here.
+ *
+ * "الأسئلة الشائعة" is deliberately still expected at `ROUTES.faqs`: the
+ * release points it at the support hub (`/support-and-help`) instead, which is
+ * a broken label/destination pair, not a new baseline (DEF-16).
  */
 export const FOOTER_LINKS: readonly FooterLink[] = [
-  { alt: 'Snapchat logo', href: 'https://www.snapchat.com/@sakaniksa', newTab: true, external: true },
-  { alt: 'Youtube logo', href: 'https://www.youtube.com/channel/UC9EngoNWGW2gu5mAvQYsbTQ', newTab: true, external: true },
-  {
-    alt: 'Whatsapp logo',
-    href: 'https://api.whatsapp.com/send/?phone=966114199090&text&type=phone_number&app_absent=0',
-    newTab: true,
-    external: true,
-  },
-  { alt: 'Instagram logo', href: 'https://www.instagram.com/sakaniksa', newTab: true, external: true },
+  { alt: 'Youtube logo', href: 'https://www.youtube.com/@Sakani', newTab: true, external: true },
+  { alt: 'Whatsapp logo', href: 'https://whatsapp.com/channel/0029VbBckQJFMqrPN3WTAu20', newTab: true, external: true },
+  { alt: 'Instagram logo', href: 'https://www.instagram.com/sakaniksa/', newTab: true, external: true },
   { alt: 'X logo', href: 'https://x.com/sakani', newTab: true, external: true },
-  { alt: 'Facebook logo', href: 'https://www.facebook.com/sakani.housing1', newTab: true, external: true },
+  { alt: 'Linkedin logo', href: 'https://www.linkedin.com/company/sakani', newTab: true, external: true },
+  { alt: 'Tiktok logo', href: 'https://www.tiktok.com/@sakani', newTab: true, external: true },
   { label: 'السوق العقاري', href: ROUTES.marketplace },
   { label: 'بيانات سكني', href: 'https://bayanat.sakani.sa', external: true },
   { label: 'شركاء سكني', href: 'https://partners.sakani.sa/', external: true },
@@ -697,7 +754,7 @@ export const CATALOGUE_FILTERS = {
  */
 export const SERVICE_TEMPLATE = {
   full: {
-    route: '/rebranding-services/rebranding-check-eligibility',
+    route: ROUTES.serviceDetail('check-eligibility'),
     title: 'التحقق من استحقاق الدعم السكني',
     tabs: ['خطوات التسجيل', 'مميزات الخدمة'],
     startCta: { label: 'بدء الخدمة', href: '/app/eligibility/check' },
@@ -715,10 +772,11 @@ export const SERVICE_TEMPLATE = {
       { label: '199090', href: 'tel:199090' },
       { label: 'infoCS@momah.gov.sa', href: 'mailto:infoCS@momah.gov.sa' },
     ],
-    guideDownload: { label: 'تحميل', hrefContains: '.pdf' },
+    /** Was "تحميل"; the 2026-11 release labels it in English inside the Arabic UI. */
+    guideDownload: { label: 'Download User Guide', hrefContains: '.pdf' },
   },
   editorial: {
-    route: '/rebranding-services/rebranding-off-plan-projects',
+    route: ROUTES.serviceDetail('off-plan-projects'),
     title: 'وحدات البيع على الخارطة',
     sections: ['مميزات المنتج'],
     cta: 'عرض الوحدات',
@@ -826,7 +884,7 @@ export const DASHBOARD = {
   /** What the split takes away from them. */
   nonSaudiWithheld: ['المستشار العقاري', 'التنازل عن استحقاق الدعم السكني', 'تصفح الوحدات'],
   eligibilityService: {
-    route: '/rebranding-services/rebranding-check-eligibility',
+    route: ROUTES.serviceDetail('check-eligibility'),
     startCta: 'بدء الخدمة',
     href: '/app/eligibility/check',
     /**
